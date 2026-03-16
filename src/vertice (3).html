@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vértice - Marketplace de Servicios</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ========== BASE ========== */
+:root {
+  --blue: #1a2b5f; --blue-l: #2d4090; --blue-p: #eef1f8;
+  --orange: #f47b20; --orange-l: #ff9a4d; --orange-p: #fff4eb;
+  --green: #22c55e; --green-p: #ecfdf5; --green-d: #16a34a;
+  --red: #ef4444; --red-p: #fef2f2;
+  --purple: #7c3aed; --purple-p: #f3f0ff;
+  --g50: #f9fafb; --g100: #f3f4f6; --g200: #e5e7eb; --g300: #d1d5db;
+  --g400: #9ca3af; --g500: #6b7280; --g600: #4b5563; --g700: #374151;
+  --g800: #1f2937; --g900: #111827; --w: #ffffff;
+  --r: 12px; --rl: 16px; --rx: 20px;
+  --t: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; color: var(--g800); background: var(--g50); -webkit-font-smoothing: antialiased; }
+
+/* ========== ANIMATIONS ========== */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.93); } to { opacity: 1; transform: scale(1); } }
+@keyframes chatMsg { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+@keyframes bellShake { 0% { transform: rotate(0); } 15% { transform: rotate(12deg); } 30% { transform: rotate(-10deg); } 45% { transform: rotate(6deg); } 60% { transform: rotate(-3deg); } 100% { transform: rotate(0); } }
+@keyframes qrScan { 0% { top: 8%; } 50% { top: 88%; } 100% { top: 8%; } }
+@keyframes successPop { 0% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes checkDraw { to { stroke-dashoffset: 0; } }
+@keyframes toastIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-12px); } }
+@keyframes toastProg { from { width: 100%; } to { width: 0; } }
+@keyframes bubblePulse { 0%,100% { box-shadow: 0 4px 16px rgba(244,123,32,0.4); } 50% { box-shadow: 0 6px 28px rgba(244,123,32,0.65); } }
+.an { animation: fadeUp 0.45s ease both; }
+.an1 { animation-delay: 0.05s; } .an2 { animation-delay: 0.1s; } .an3 { animation-delay: 0.15s; } .an4 { animation-delay: 0.2s; }
+
+/* ========== SCREEN ========== */
+.screen { display: none; animation: fadeIn 0.3s ease; }
+.screen.active { display: block; }
+
+/* ========== TOAST ========== */
+.toast-wrap { position: fixed; top: 76px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; max-width: 400px; width: calc(100% - 40px); }
+.toast { pointer-events: all; display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; border-radius: var(--r); background: var(--w); box-shadow: 0 8px 32px rgba(0,0,0,0.14); border-left: 4px solid var(--blue); animation: toastIn 0.3s ease both; position: relative; overflow: hidden; }
+.toast.out { animation: toastOut 0.3s ease both; }
+.toast.te { border-left-color: var(--red); } .toast.tw { border-left-color: var(--orange); }
+.toast.ts { border-left-color: var(--green); } .toast.ti { border-left-color: var(--blue); }
+.toast-icon { font-size: 20px; flex-shrink: 0; }
+.toast-body { flex: 1; }
+.toast-title { font-size: 14px; font-weight: 700; color: var(--g900); }
+.toast-msg { font-size: 13px; color: var(--g500); line-height: 1.35; margin-top: 2px; }
+.toast-close { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--g400); padding: 0; }
+.toast-prog { position: absolute; bottom: 0; left: 0; height: 3px; }
+.te .toast-prog { background: var(--red); } .tw .toast-prog { background: var(--orange); }
+.ts .toast-prog { background: var(--green); } .ti .toast-prog { background: var(--blue); }
+
+/* ========== BUTTONS ========== */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 24px; border-radius: 10px; border: none; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: var(--t); text-decoration: none; white-space: nowrap; }
+.btn:hover { transform: translateY(-1px); } .btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+.btn-p { background: var(--orange); color: #fff; box-shadow: 0 2px 10px rgba(244,123,32,0.3); }
+.btn-p:hover:not(:disabled) { background: var(--orange-l); }
+.btn-s { background: var(--w); color: var(--blue); border: 2px solid var(--blue); }
+.btn-s:hover { background: var(--blue); color: #fff; }
+.btn-g { background: var(--green); color: #fff; } .btn-g:hover:not(:disabled) { background: var(--green-d); }
+.btn-o { background: transparent; color: var(--g600); border: 1.5px solid var(--g300); }
+.btn-o:hover { border-color: var(--blue); color: var(--blue); }
+.btn-d { background: var(--red-p); color: var(--red); } .btn-d:hover { background: var(--red); color: #fff; }
+.btn-b { background: var(--blue); color: #fff; } .btn-b:hover:not(:disabled) { background: var(--blue-l); }
+.btn-sm { padding: 9px 18px; font-size: 13px; border-radius: 8px; }
+.btn-lg { padding: 15px 30px; font-size: 16px; border-radius: 12px; }
+.btn-full { width: 100%; }
+.btn-icon { width: 36px; height: 36px; padding: 0; border-radius: 8px; border: 1.5px solid var(--g200); background: var(--w); color: var(--g500); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; transition: var(--t); }
+.btn-icon:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-p); }
+.btn-icon.dng:hover { border-color: var(--red); color: var(--red); background: var(--red-p); }
+
+/* ========== LANDING ========== */
+.landing { background: var(--w); min-height: 100vh; }
+.land-nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--g100); }
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; color: var(--blue); cursor: pointer; text-decoration: none; }
+.logo-icon { width: 36px; height: 36px; background: var(--blue); color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; flex-shrink: 0; }
+.hero { padding: 72px 32px 56px; text-align: center; background: linear-gradient(180deg, var(--blue-p) 0%, var(--w) 100%); position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -200px; right: -200px; width: 500px; height: 500px; border-radius: 50%; background: radial-gradient(circle, rgba(244,123,32,0.07), transparent 70%); }
+.hero-badge { display: inline-block; padding: 8px 20px; border-radius: 50px; background: var(--orange); color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 24px; }
+.hero h1 { font-family: 'Playfair Display', serif; font-size: 52px; font-weight: 800; color: var(--blue); line-height: 1.15; margin-bottom: 20px; }
+.hero h1 .accent { color: var(--orange); }
+.hero > p { font-size: 18px; color: var(--g500); max-width: 520px; margin: 0 auto 32px; line-height: 1.6; }
+.hero-btns { display: flex; gap: 16px; justify-content: center; }
+.specs { padding: 72px 32px; text-align: center; }
+.specs h2 { font-family: 'Playfair Display', serif; font-size: 30px; color: var(--blue); margin-bottom: 8px; }
+.specs .sub { color: var(--g500); margin-bottom: 40px; font-size: 16px; }
+.spec-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; max-width: 900px; margin: 0 auto; }
+.spec-card { padding: 28px 20px; border-radius: var(--rl); border: 1.5px solid var(--g200); background: var(--w); transition: var(--t); cursor: pointer; }
+.spec-card:hover { border-color: var(--orange); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.spec-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--blue-p); display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 14px; }
+.spec-card h3 { font-size: 15px; font-weight: 600; color: var(--blue); margin-bottom: 4px; }
+.spec-card p { font-size: 13px; color: var(--g500); line-height: 1.4; }
+.why-sec { padding: 72px 32px; background: var(--g50); }
+.why-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; max-width: 960px; margin: 0 auto; align-items: center; }
+.why-content h2 { font-family: 'Playfair Display', serif; font-size: 30px; color: var(--blue); margin-bottom: 28px; }
+.why-item { display: flex; gap: 14px; margin-bottom: 22px; }
+.why-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--blue-p); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+.why-item h4 { font-size: 15px; font-weight: 600; color: var(--blue); margin-bottom: 3px; }
+.why-item p { font-size: 14px; color: var(--g500); line-height: 1.4; }
+.why-visual { background: linear-gradient(135deg, var(--blue), var(--blue-l)); border-radius: var(--rx); padding: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 340px; }
+.land-footer { padding: 36px 32px; text-align: center; border-top: 1px solid var(--g200); background: var(--w); }
+.land-footer p { font-size: 13px; color: var(--g400); }
+
+/* ========== APP HEADER ========== */
+.app-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 28px; background: var(--w); border-bottom: 1px solid var(--g200); position: sticky; top: 0; z-index: 100; gap: 12px; }
+.hdr-left { display: flex; align-items: center; gap: 16px; }
+.hdr-center { display: flex; gap: 6px; }
+.view-tog { padding: 8px 20px; border-radius: 8px; border: 1.5px solid var(--g200); background: var(--w); font-family: inherit; font-size: 13px; font-weight: 500; color: var(--g500); cursor: pointer; transition: var(--t); }
+.view-tog.on { background: var(--blue); color: #fff; border-color: var(--blue); }
+.view-tog:hover:not(.on) { border-color: var(--blue); color: var(--blue); }
+.hdr-right { display: flex; align-items: center; gap: 14px; }
+.hdr-user { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; color: var(--g700); cursor: pointer; }
+.hdr-user:hover { color: var(--blue); }
+.user-badge { padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+.ub-c { background: var(--blue-p); color: var(--blue); } .ub-p { background: var(--orange-p); color: var(--orange); }
+.notif-btn { position: relative; background: none; border: none; cursor: pointer; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: var(--t); }
+.notif-btn:hover { background: var(--g100); }
+.notif-btn .badge { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--red); color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.notif-btn.shake { animation: bellShake 0.6s ease; }
+.logout-btn { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--g400); padding: 6px; transition: var(--t); }
+.logout-btn:hover { color: var(--red); }
+
+/* NOTIF DROPDOWN */
+.notif-drop { position: absolute; top: 54px; right: 0; width: 350px; background: var(--w); border-radius: var(--r); border: 1.5px solid var(--g200); box-shadow: 0 12px 40px rgba(0,0,0,0.12); z-index: 200; display: none; animation: fadeDown 0.2s ease; }
+.notif-drop.on { display: block; }
+.notif-drop-hdr { padding: 14px 18px; border-bottom: 1px solid var(--g100); font-size: 15px; font-weight: 600; }
+.noti-item { padding: 12px 18px; border-bottom: 1px solid var(--g50); display: flex; gap: 12px; cursor: pointer; transition: var(--t); }
+.noti-item:hover { background: var(--g50); } .noti-item:last-child { border: none; }
+.noti-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px; }
+.noti-icon.bl { background: var(--blue-p); } .noti-icon.or { background: var(--orange-p); } .noti-icon.gr { background: var(--green-p); }
+.noti-text { font-size: 13px; color: var(--g700); line-height: 1.35; }
+.noti-time { font-size: 11px; color: var(--g400); margin-top: 2px; }
+
+/* ========== DASHBOARD ========== */
+.dash { padding: 28px 32px; max-width: 1000px; margin: 0 auto; padding-bottom: 100px; }
+.dash-title { font-size: 13px; font-weight: 500; color: var(--g400); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 18px; }
+.dash-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 32px; }
+.stat-card { padding: 18px 20px; border-radius: var(--r); border: 1.5px solid var(--g200); background: var(--w); transition: var(--t); }
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.stat-card.bl { border-left: 4px solid var(--blue); background: var(--blue-p); }
+.stat-card.or { border-left: 4px solid var(--orange); background: var(--orange-p); }
+.stat-card.gr { border-left: 4px solid var(--green); background: var(--green-p); }
+.stat-card.pu { border-left: 4px solid var(--purple); background: var(--purple-p); }
+.stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+.stat-card.bl .stat-label { color: var(--blue); } .stat-card.or .stat-label { color: var(--orange); }
+.stat-card.gr .stat-label { color: var(--green); } .stat-card.pu .stat-label { color: var(--purple); }
+.stat-num { font-size: 32px; font-weight: 700; color: var(--g800); }
+.sec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.sec-title { font-size: 20px; font-weight: 700; }
+
+/* ========== REQUEST CARDS ========== */
+.req-card { background: var(--w); border-radius: var(--r); border: 1.5px solid var(--g200); padding: 20px; margin-bottom: 14px; transition: var(--t); }
+.req-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.req-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; gap: 10px; }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.tag { padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+.tag-s { border: 1.5px solid var(--orange); color: var(--orange); background: var(--orange-p); }
+.tag-c { border: 1.5px solid var(--g300); color: var(--g600); background: var(--g50); }
+.tag-p { border: 1.5px solid var(--blue); color: var(--blue); background: var(--blue-p); }
+.tag-d { border: 1.5px solid var(--green); color: var(--green-d); background: var(--green-p); }
+.req-acts { display: flex; gap: 6px; flex-shrink: 0; }
+.req-body { margin-bottom: 12px; }
+.req-body h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.req-body p { font-size: 14px; color: var(--g500); }
+.req-bot { display: flex; align-items: center; justify-content: space-between; }
+.bud-count { text-align: right; }
+.bud-count .num { font-size: 26px; font-weight: 700; color: var(--blue); }
+.bud-count .lbl { font-size: 12px; color: var(--g400); }
+
+/* CLIENT ROW */
+.cli-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--g100); }
+.cli-row .avatar { width: 34px; height: 34px; font-size: 12px; border-radius: 8px; }
+.cli-info { font-size: 13px; color: var(--g600); }
+.cli-info strong { color: var(--g800); }
+
+/* ========== MODALS ========== */
+.modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; }
+.modal-bg.on { display: flex; }
+.modal { background: var(--w); border-radius: var(--rx); padding: 0; max-width: 520px; width: 92%; max-height: 90vh; overflow-y: auto; animation: scaleIn 0.3s ease both; box-shadow: 0 20px 50px rgba(0,0,0,0.12); }
+.modal-hdr { padding: 24px 28px 0; display: flex; align-items: flex-start; justify-content: space-between; }
+.modal-hdr h2 { font-size: 22px; font-weight: 700; color: var(--g900); }
+.modal-hdr p { font-size: 14px; color: var(--g500); margin-top: 3px; }
+.modal-close { width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid var(--g200); background: var(--w); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--g400); flex-shrink: 0; transition: var(--t); }
+.modal-close:hover { background: var(--g100); color: var(--g700); }
+.modal-body { padding: 20px 28px 28px; }
+
+/* FORMS */
+.fg { margin-bottom: 18px; }
+.fl { display: block; font-size: 14px; font-weight: 600; color: var(--g700); margin-bottom: 7px; }
+.fi, .fsel, .fta { width: 100%; padding: 12px 16px; border-radius: 10px; border: 1.5px solid var(--g200); font-family: inherit; font-size: 15px; color: var(--g800); transition: var(--t); background: var(--w); }
+.fi:focus, .fsel:focus, .fta:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,43,95,0.1); }
+.fi.err, .fsel.err { border-color: var(--red); box-shadow: 0 0 0 3px rgba(239,68,68,0.1); }
+.fi::placeholder, .fta::placeholder { color: var(--g400); }
+.fta { resize: vertical; min-height: 90px; }
+.fsel { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; }
+.ferr { font-size: 12px; color: var(--red); margin-top: 4px; display: none; }
+.ferr.vis { display: block; animation: fadeUp 0.2s ease; }
+
+/* BUDGET CARDS */
+.bud-card { background: var(--w); border-radius: var(--r); border: 1.5px solid var(--g200); padding: 20px; margin-bottom: 14px; }
+.bud-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.bud-pro { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.avatar { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #fff; flex-shrink: 0; }
+.avatar.bl { background: var(--blue); } .avatar.or { background: var(--orange); }
+.avatar.gr { background: var(--green-d); } .avatar.pu { background: var(--purple); }
+.bud-info h4 { font-size: 15px; font-weight: 600; }
+.bud-info .sp { font-size: 13px; color: var(--g500); }
+.bud-info .rt { font-size: 12px; color: var(--g400); margin-top: 2px; }
+.bud-price { font-size: 26px; font-weight: 700; color: var(--blue); }
+.bstat { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; margin-top: 3px; }
+.bstat-p { background: var(--orange-p); color: var(--orange); }
+.bstat-a { background: var(--green-p); color: var(--green-d); }
+.bstat-r { background: var(--red-p); color: var(--red); }
+.bud-msg { padding: 12px 16px; background: var(--g50); border-radius: 10px; margin-bottom: 14px; font-size: 14px; color: var(--g600); font-style: italic; }
+.bud-acts { display: flex; gap: 10px; }
+.bud-acts .btn { flex: 1; }
+
+/* ========== CHAT ========== */
+.chat-wrap { display: flex; flex-direction: column; height: calc(100vh - 57px); max-width: 700px; margin: 0 auto; background: var(--w); }
+.chat-hdr { padding: 14px 20px; border-bottom: 1px solid var(--g200); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.chat-hdr-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.chat-back { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--g500); flex-shrink: 0; }
+.chat-uinfo h3 { font-size: 15px; font-weight: 600; }
+.chat-uinfo p { font-size: 12px; color: var(--g500); }
+.chat-acts { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.chat-msgs { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.c-msg { max-width: 78%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.45; animation: chatMsg 0.3s ease both; }
+.c-msg.sent { align-self: flex-end; background: var(--blue); color: #fff; border-bottom-right-radius: 4px; }
+.c-msg.recv { align-self: flex-start; background: var(--g100); color: var(--g800); border-bottom-left-radius: 4px; }
+.c-msg .time { font-size: 11px; opacity: 0.6; margin-top: 3px; }
+.c-sys { align-self: center; padding: 7px 16px; background: var(--blue-p); border-radius: 18px; font-size: 12px; color: var(--blue); font-weight: 500; }
+.chat-input { padding: 14px 20px; border-top: 1px solid var(--g200); display: flex; gap: 12px; align-items: center; background: var(--w); }
+.chat-input input { flex: 1; padding: 12px 18px; border-radius: 24px; border: 1.5px solid var(--g200); font-family: inherit; font-size: 14px; }
+.chat-input input:focus { outline: none; border-color: var(--blue); }
+.chat-send { width: 44px; height: 44px; border-radius: 50%; background: var(--orange); border: none; cursor: pointer; color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: var(--t); }
+.chat-send:hover { background: var(--orange-l); transform: scale(1.05); }
+
+/* QR */
+.qr-banner { margin: 0 20px; padding: 14px 16px; border-radius: var(--r); display: flex; align-items: center; gap: 12px; font-size: 13px; line-height: 1.4; animation: fadeUp 0.3s ease; }
+.qr-banner.warn { background: var(--orange-p); border: 1.5px solid var(--orange); color: var(--g700); }
+.qr-banner.warn strong { color: var(--orange); }
+.qr-banner.ok { background: var(--green-p); border: 1.5px solid var(--green); color: var(--green-d); font-weight: 600; }
+.qr-banner .qbi { font-size: 20px; flex-shrink: 0; }
+
+.qr-display { align-self: center; padding: 24px; background: var(--w); border: 2px solid var(--g200); border-radius: var(--rl); text-align: center; animation: scaleIn 0.4s ease both; box-shadow: 0 8px 30px rgba(0,0,0,0.08); max-width: 280px; width: 100%; }
+.qr-display h4 { font-size: 14px; font-weight: 600; color: var(--blue); margin-bottom: 12px; }
+.qr-display p { font-size: 12px; color: var(--g400); margin-top: 10px; }
+.qr-svg-box { width: 200px; height: 200px; margin: 0 auto; }
+.qr-svg-box svg { width: 100%; height: 100%; }
+
+.qr-camera { align-self: center; width: 280px; padding: 24px; background: var(--g900); border-radius: var(--rl); text-align: center; animation: scaleIn 0.4s ease both; box-shadow: 0 8px 30px rgba(0,0,0,0.2); position: relative; overflow: hidden; }
+.qr-camera h4 { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 16px; }
+.qr-viewport { width: 200px; height: 200px; margin: 0 auto; position: relative; border: 2px solid rgba(255,255,255,0.2); border-radius: 12px; overflow: hidden; background: #111; }
+.qr-viewport::after { content: ''; position: absolute; left: 10%; right: 10%; height: 2px; background: var(--green); box-shadow: 0 0 12px var(--green), 0 0 24px var(--green); animation: qrScan 2s ease-in-out infinite; border-radius: 2px; }
+.corner { position: absolute; width: 18px; height: 18px; border-color: var(--green); }
+.corner.tl { top: 0; left: 0; border-top: 3px solid; border-left: 3px solid; border-radius: 3px 0 0 0; }
+.corner.tr { top: 0; right: 0; border-top: 3px solid; border-right: 3px solid; border-radius: 0 3px 0 0; }
+.corner.bl { bottom: 0; left: 0; border-bottom: 3px solid; border-left: 3px solid; border-radius: 0 0 0 3px; }
+.corner.br { bottom: 0; right: 0; border-bottom: 3px solid; border-right: 3px solid; border-radius: 0 0 3px 0; }
+.qr-camera p { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 14px; }
+.qr-success { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; border-radius: var(--rl); }
+.qr-check { width: 64px; height: 64px; border-radius: 50%; background: var(--green); display: flex; align-items: center; justify-content: center; animation: successPop 0.5s ease both; margin-bottom: 10px; }
+.qr-check svg { width: 32px; height: 32px; }
+.qr-check svg path { stroke: #fff; stroke-width: 3; fill: none; stroke-dasharray: 40; stroke-dashoffset: 40; animation: checkDraw 0.4s 0.3s ease forwards; stroke-linecap: round; }
+.qr-success-txt { color: #fff; font-weight: 700; font-size: 15px; animation: fadeUp 0.4s 0.4s ease both; }
+
+/* CHAT BUBBLE */
+.chat-bubble { position: fixed; bottom: 24px; right: 24px; z-index: 90; display: none; }
+.chat-bubble.on { display: block; }
+.cb-btn { width: 58px; height: 58px; border-radius: 50%; background: var(--orange); border: none; cursor: pointer; color: #fff; font-size: 26px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(244,123,32,0.4); animation: bubblePulse 3s infinite; transition: var(--t); position: relative; }
+.cb-btn:hover { transform: scale(1.05); }
+.cb-badge { position: absolute; top: -3px; right: -3px; width: 22px; height: 22px; border-radius: 50%; background: var(--red); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 2px solid var(--w); }
+.cb-popup { position: absolute; bottom: 68px; right: 0; width: 300px; background: var(--w); border-radius: var(--rl); box-shadow: 0 8px 30px rgba(0,0,0,0.14); border: 1.5px solid var(--g200); display: none; animation: fadeUp 0.25s ease; }
+.cb-popup.on { display: block; }
+.cb-popup-hdr { padding: 16px 18px; border-bottom: 1px solid var(--g100); font-size: 15px; font-weight: 700; }
+.cb-list { padding: 8px; max-height: 300px; overflow-y: auto; }
+.cb-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; cursor: pointer; transition: var(--t); }
+.cb-item:hover { background: var(--g100); }
+.cb-item .avatar { width: 40px; height: 40px; font-size: 14px; }
+.cb-item-info { flex: 1; min-width: 0; }
+.cb-item-info h4 { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cb-item-info p { font-size: 12px; color: var(--g400); }
+.cb-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+
+/* PROFILE */
+.prof-wrap { max-width: 560px; margin: 28px auto; padding: 0 28px; padding-bottom: 100px; }
+.prof-card { background: var(--w); border-radius: var(--rx); border: 1.5px solid var(--g200); overflow: hidden; }
+.prof-hdr { height: 110px; background: linear-gradient(135deg, var(--blue), var(--blue-l)); position: relative; }
+.prof-av { width: 72px; height: 72px; border-radius: 18px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 28px; font-weight: 700; border: 4px solid #fff; position: absolute; bottom: -36px; left: 28px; box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
+.prof-body { padding: 48px 28px 28px; }
+.prof-body h2 { font-size: 20px; font-weight: 700; margin-bottom: 3px; }
+.prof-body .sp { font-size: 14px; color: var(--orange); font-weight: 600; margin-bottom: 14px; }
+.prof-stats { display: flex; gap: 24px; margin-bottom: 18px; }
+.prof-stat { text-align: center; }
+.prof-stat .v { font-size: 20px; font-weight: 700; color: var(--blue); }
+.prof-stat .l { font-size: 12px; color: var(--g400); }
+.prof-desc { font-size: 14px; color: var(--g600); line-height: 1.55; margin-bottom: 14px; padding: 14px; background: var(--g50); border-radius: 10px; }
+.prof-zone { font-size: 13px; color: var(--g500); margin-bottom: 18px; }
+.prof-skills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.prof-skill { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; background: var(--blue-p); color: var(--blue); }
+
+/* SUBSCRIPTION */
+.sub-wrap { max-width: 460px; margin: 48px auto; padding: 0 28px; text-align: center; padding-bottom: 100px; }
+.sub-card { background: var(--w); border-radius: var(--rx); border: 2px solid var(--orange); padding: 40px 32px; position: relative; overflow: hidden; }
+.sub-card h2 { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--blue); margin-bottom: 10px; }
+.sub-card > p { font-size: 15px; color: var(--g500); line-height: 1.5; margin-bottom: 20px; }
+.sub-price { font-size: 38px; font-weight: 800; color: var(--blue); }
+.sub-price span { font-size: 15px; font-weight: 500; color: var(--g400); }
+.sub-usd { font-size: 13px; color: var(--g400); margin-bottom: 4px; margin-top: 2px; }
+.sub-list { list-style: none; text-align: left; margin: 24px 0; }
+.sub-list li { padding: 7px 0; font-size: 14px; color: var(--g600); display: flex; align-items: center; gap: 10px; }
+.sub-list li::before { content: '✓'; color: var(--green); font-weight: 700; }
+
+/* STAR RATING */
+.stars { display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; }
+.star { font-size: 30px; cursor: pointer; color: var(--g300); transition: var(--t); }
+.star:hover, .star.on { color: var(--orange); transform: scale(1.1); }
+
+/* CANCEL / REPORT OPTIONS */
+.opt-btn { display: block; width: 100%; padding: 14px 16px; margin-bottom: 8px; border-radius: 10px; border: 1.5px solid var(--g200); background: var(--w); text-align: left; font-family: inherit; font-size: 14px; color: var(--g700); cursor: pointer; transition: var(--t); }
+.opt-btn:hover { border-color: var(--blue); background: var(--blue-p); }
+.opt-btn.sel { border-color: var(--blue); background: var(--blue-p); font-weight: 600; }
+.opt-btn.rpt:hover { border-color: var(--red); background: var(--red-p); }
+.opt-btn.rpt.sel { border-color: var(--red); background: var(--red-p); font-weight: 600; }
+
+/* ========== MOBILE ========== */
+@media (max-width: 768px) {
+  .land-nav { padding: 12px 16px; }
+  .hero { padding: 48px 20px 36px; }
+  .hero h1 { font-size: 32px; }
+  .hero > p { font-size: 15px; }
+  .hero-btns { flex-direction: column; align-items: center; gap: 10px; }
+  .specs { padding: 40px 16px; }
+  .spec-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .spec-card { padding: 20px 16px; }
+  .spec-card h3 { font-size: 14px; }
+  .why-sec { padding: 40px 16px; }
+  .why-grid { grid-template-columns: 1fr; gap: 24px; }
+  .land-footer { padding: 28px 16px; }
+
+  .app-header { padding: 10px 14px; gap: 8px; }
+  .hdr-left .logo span { display: none; }
+  .hdr-user { display: none; }
+  .view-tog { padding: 7px 14px; font-size: 12px; }
+
+  .dash { padding: 18px 14px; padding-bottom: 100px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { padding: 14px 16px; }
+  .stat-num { font-size: 26px; }
+  .sec-title { font-size: 17px; }
+
+  .req-card { padding: 16px; }
+  .req-body h3 { font-size: 15px; }
+
+  .modal-bg { align-items: flex-end; }
+  .modal { border-radius: var(--rx) var(--rx) 0 0; width: 100%; max-width: 100%; max-height: 92vh; }
+  .modal-hdr { padding: 20px 18px 0; }
+  .modal-hdr h2 { font-size: 19px; }
+  .modal-body { padding: 16px 18px 24px; }
+
+  .chat-wrap { height: calc(100dvh - 53px); max-width: 100%; }
+  .chat-hdr { padding: 10px 14px; }
+  .chat-acts { gap: 5px; }
+  .chat-acts .btn { padding: 6px 10px; font-size: 11px; }
+  .chat-msgs { padding: 14px; }
+  .chat-input { padding: 10px 14px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+
+  .qr-display { max-width: 240px; padding: 18px; }
+  .qr-svg-box { width: 170px; height: 170px; }
+  .qr-camera { width: 240px; padding: 18px; }
+  .qr-viewport { width: 170px; height: 170px; }
+
+  .chat-bubble { bottom: 16px; right: 14px; }
+  .cb-btn { width: 52px; height: 52px; font-size: 22px; }
+  .cb-popup { width: 260px; }
+
+  .prof-wrap { padding: 0 14px; padding-bottom: 80px; margin-top: 16px; }
+  .sub-wrap { padding: 0 14px; padding-bottom: 80px; margin-top: 24px; }
+  .sub-card { padding: 28px 20px; }
+
+  .notif-drop { right: -60px; width: calc(100vw - 20px); max-width: 350px; }
+}
+</style>
+</head>
+<body>
+
+<div class="toast-wrap" id="TW"></div>
+
+<!-- ========== LANDING ========== -->
+<div id="landingScreen" class="screen active landing">
+  <nav class="land-nav">
+    <a class="logo" onclick="goHome()"><div class="logo-icon">V</div><span>Vértice</span></a>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-o btn-sm" onclick="enterApp('client')">Ingresar</button>
+      <button class="btn btn-p btn-sm" onclick="enterApp('client')">Registrarse</button>
+    </div>
+  </nav>
+  <section class="hero">
+    <div class="hero-badge">Servicios para el hogar de confianza</div>
+    <h1>El experto adecuado,<br><span class="accent">justo cuando lo necesitas.</span></h1>
+    <p>Vértice conecta a propietarios con plomeros, electricistas y gasistas verificados. Cotizá, contratá y evaluá en un solo lugar.</p>
+    <div class="hero-btns">
+      <button class="btn btn-p btn-lg" onclick="enterApp('client')">Encontrar un Profesional</button>
+      <button class="btn btn-s btn-lg" onclick="enterApp('pro')">Ofrecer mis Servicios</button>
+    </div>
+  </section>
+  <section class="specs">
+    <h2>Especialidades Destacadas</h2>
+    <p class="sub">Los mejores técnicos certificados de tu zona.</p>
+    <div class="spec-grid">
+      <div class="spec-card"><div class="spec-icon">🔧</div><h3>Plomería</h3><p>Cañerías, instalaciones sanitarias y destapes.</p></div>
+      <div class="spec-card"><div class="spec-icon">⚡</div><h3>Electricidad</h3><p>Cableado, tableros, iluminación y emergencias.</p></div>
+      <div class="spec-card"><div class="spec-icon">🔥</div><h3>Gas</h3><p>Artefactos, detección de fugas y mantenimiento.</p></div>
+      <div class="spec-card"><div class="spec-icon">🎨</div><h3>Pintura</h3><p>Interior, exterior, impermeabilización y acabados.</p></div>
+    </div>
+  </section>
+  <section class="why-sec">
+    <div class="why-grid">
+      <div class="why-content">
+        <h2>¿Por qué elegir Vértice?</h2>
+        <div class="why-item"><div class="why-icon">✓</div><div><h4>Profesionales Verificados</h4><p>Revisamos antecedentes y certificaciones de cada técnico.</p></div></div>
+        <div class="why-item"><div class="why-icon">⏱</div><div><h4>Respuesta Rápida</h4><p>Profesionales disponibles inmediatamente para emergencias.</p></div></div>
+        <div class="why-item"><div class="why-icon">⭐</div><div><h4>Reseñas Reales</h4><p>Leé opiniones de otros clientes antes de decidir.</p></div></div>
+        <div class="why-item"><div class="why-icon">🛡</div><div><h4>Trabajo Garantizado</h4><p>Si no quedás conforme, te ayudamos a resolverlo.</p></div></div>
+      </div>
+      <div class="why-visual">
+        <div style="font-size:72px;margin-bottom:20px">🏠</div>
+        <div style="color:#fff;text-align:center"><div style="font-size:18px;font-weight:700;margin-bottom:8px">+2,500 trabajos completados</div><div style="font-size:14px;opacity:.8">en San Martín, Mendoza</div></div>
+        <div style="background:rgba(255,255,255,.15);border-radius:12px;padding:16px 24px;margin-top:24px"><div style="color:var(--orange);font-size:14px">⭐⭐⭐⭐⭐ 4.8</div><div style="color:#fff;font-size:13px;margin-top:4px">"Solucionó mi fuga de agua en menos de una hora."</div></div>
+      </div>
+    </div>
+  </section>
+  <footer class="land-footer">
+    <div class="logo-icon" style="display:inline-flex;margin-bottom:10px">V</div>
+    <p>El marketplace confiable para servicios del hogar.</p>
+    <p style="margin-top:6px">© 2026 Vértice Marketplace. Todos los derechos reservados.</p>
+  </footer>
+</div>
+
+<!-- ========== APP ========== -->
+<div id="appScreen" class="screen">
+  <header class="app-header">
+    <div class="hdr-left">
+      <a class="logo" onclick="goHome()"><div class="logo-icon">V</div><span>Vértice</span></a>
+    </div>
+    <div class="hdr-center">
+      <button class="view-tog on" id="togC" onclick="switchView('client')">Cliente</button>
+      <button class="view-tog" id="togP" onclick="switchView('pro')">Profesional</button>
+    </div>
+    <div class="hdr-right">
+      <div class="hdr-user" id="hdrUser" onclick="openEditProfile()">
+        <span id="userName">Gerardo Carreras</span>
+        <span class="user-badge ub-c" id="userBadge">Cliente</span>
+        <span style="font-size:16px">✏️</span>
+      </div>
+      <div style="position:relative">
+        <button class="notif-btn" id="notifBtn" onclick="toggleNotifs()">🔔<span class="badge" id="notifCount">3</span></button>
+        <div class="notif-drop" id="notifDrop"><div class="notif-drop-hdr">Notificaciones</div><div id="notifList"></div></div>
+      </div>
+      <button class="logout-btn" onclick="goHome()" title="Salir">⏻</button>
+    </div>
+  </header>
+  <div id="clientDash" class="dash" style="display:none"></div>
+  <div id="proDash" class="dash" style="display:none"></div>
+  <div id="chatView" style="display:none"></div>
+  <div id="profileView" style="display:none"></div>
+  <div id="subView" style="display:none"></div>
+</div>
+
+<!-- CHAT BUBBLE -->
+<div class="chat-bubble" id="chatBubble">
+  <div class="cb-popup" id="cbPopup"><div class="cb-popup-hdr">Chats Activos</div><div class="cb-list" id="cbList"></div></div>
+  <button class="cb-btn" onclick="toggleBubble()">💬<span class="cb-badge" id="cbBadge" style="display:none">0</span></button>
+</div>
+
+<!-- ========== MODALS ========== -->
+<div class="modal-bg" id="mReq"><div class="modal"><div class="modal-hdr"><div><h2 id="mReqTitle">Nueva Solicitud</h2><p>Hasta 3 profesionales podrán enviarte presupuesto.</p></div><button class="modal-close" onclick="closeM('mReq')">✕</button></div><div class="modal-body">
+  <div class="fg"><label class="fl">Tipo de profesional <span style="color:var(--red)">*</span></label><select class="fsel" id="rType"><option value="">Seleccioná un servicio...</option><option>Electricista</option><option>Gasista</option><option>Plomero</option><option>Pintor</option><option>Albañil</option><option>Jardinero</option></select><div class="ferr" id="eType">Seleccioná un tipo</div></div>
+  <div class="fg"><label class="fl">¿Qué necesitas? <span style="color:var(--red)">*</span></label><input class="fi" id="rTitle" placeholder="Ej: Fuga de agua, corte de luz..."><div class="ferr" id="eTitle">Escribí un título</div></div>
+  <div class="fg"><label class="fl">Detalles</label><textarea class="fta" id="rDetail" placeholder="Describí el problema con detalle..."></textarea></div>
+  <div class="fg"><label class="fl">Ubicación</label><input class="fi" id="rLoc" value="San Martín, Mendoza"></div>
+  <button class="btn btn-p btn-full btn-lg" id="rSubmitBtn" onclick="submitReq()">Publicar Solicitud</button>
+</div></div></div>
+
+<div class="modal-bg" id="mBud"><div class="modal" style="max-width:560px"><div class="modal-hdr"><div><h2>Presupuestos Recibidos</h2><p id="mBudSub"></p></div><button class="modal-close" onclick="closeM('mBud')">✕</button></div><div class="modal-body" id="mBudBody"></div></div></div>
+
+<div class="modal-bg" id="mCancel"><div class="modal" style="max-width:420px"><div class="modal-hdr"><div><h2>¿Por qué cancelás?</h2></div><button class="modal-close" onclick="closeM('mCancel')">✕</button></div><div class="modal-body">
+  <button class="opt-btn" onclick="selCancel(this)">Elegí otro profesional</button>
+  <button class="opt-btn" onclick="selCancel(this)">Cambió mi situación</button>
+  <button class="opt-btn" onclick="selCancel(this)">Tardó demasiado</button>
+  <button class="opt-btn" onclick="selCancel(this)">Otro motivo</button>
+  <button class="btn btn-d btn-full" style="margin-top:14px" onclick="doCancel()">Confirmar Cancelación</button>
+</div></div></div>
+
+<div class="modal-bg" id="mRate"><div class="modal" style="max-width:420px"><div class="modal-hdr"><div><h2 id="rateTitle">Calificar</h2><p>¿Cómo fue tu experiencia?</p></div><button class="modal-close" onclick="closeM('mRate')">✕</button></div><div class="modal-body" style="text-align:center">
+  <div class="stars" id="starsEl"><span class="star" onclick="setRat(1)">★</span><span class="star" onclick="setRat(2)">★</span><span class="star" onclick="setRat(3)">★</span><span class="star" onclick="setRat(4)">★</span><span class="star" onclick="setRat(5)">★</span></div>
+  <div class="fg" style="text-align:left"><textarea class="fta" id="rateCom" placeholder="Dejá un comentario..." style="min-height:70px"></textarea></div>
+  <button class="btn btn-p btn-full btn-lg" onclick="doRate()">Enviar Calificación</button>
+</div></div></div>
+
+<div class="modal-bg" id="mSendBud"><div class="modal" style="max-width:460px"><div class="modal-hdr"><div><h2>Enviar Presupuesto</h2><p id="mSBudSub"></p></div><button class="modal-close" onclick="closeM('mSendBud')">✕</button></div><div class="modal-body">
+  <div class="fg"><label class="fl">Precio (ARS$) <span style="color:var(--red)">*</span></label><input class="fi" id="bPrice" type="number" placeholder="Ej: 15000"><div class="ferr" id="ePrice">Ingresá un precio</div></div>
+  <div class="fg"><label class="fl">Tiempo estimado</label><input class="fi" id="bTime" placeholder="Ej: 2 horas"></div>
+  <div class="fg"><label class="fl">Mensaje</label><textarea class="fta" id="bMsg" placeholder="Tu propuesta..." style="min-height:70px"></textarea></div>
+  <button class="btn btn-p btn-full btn-lg" onclick="doSendBud()">Enviar Presupuesto</button>
+</div></div></div>
+
+<div class="modal-bg" id="mDetail"><div class="modal"><div class="modal-hdr"><div><h2 id="detTitle"></h2><p id="detSub"></p></div><button class="modal-close" onclick="closeM('mDetail')">✕</button></div><div class="modal-body" id="detBody"></div></div></div>
+
+<div class="modal-bg" id="mDelete"><div class="modal" style="max-width:400px"><div class="modal-hdr"><div><h2>Eliminar Solicitud</h2><p id="delText"></p></div><button class="modal-close" onclick="closeM('mDelete')">✕</button></div><div class="modal-body" style="display:flex;gap:12px">
+  <button class="btn btn-o btn-full" onclick="closeM('mDelete')">Cancelar</button>
+  <button class="btn btn-d btn-full" onclick="doDelete()">Eliminar</button>
+</div></div></div>
+
+<div class="modal-bg" id="mReport"><div class="modal" style="max-width:420px"><div class="modal-hdr"><div><h2>Reportar Usuario</h2><p>Seleccioná el motivo.</p></div><button class="modal-close" onclick="closeM('mReport')">✕</button></div><div class="modal-body">
+  <button class="opt-btn rpt" onclick="selReport(this)">Comportamiento inapropiado</button>
+  <button class="opt-btn rpt" onclick="selReport(this)">No es quien dice ser</button>
+  <button class="opt-btn rpt" onclick="selReport(this)">No se presentó</button>
+  <button class="opt-btn rpt" onclick="selReport(this)">Intento de estafa</button>
+  <button class="opt-btn rpt" onclick="selReport(this)">Otro motivo</button>
+  <div class="fg" style="margin-top:12px"><textarea class="fta" id="rptMsg" placeholder="Detallá el problema (opcional)..." style="min-height:60px"></textarea></div>
+  <button class="btn btn-d btn-full" onclick="doReport()">Enviar Reporte</button>
+</div></div></div>
+
+<div class="modal-bg" id="mEditProf"><div class="modal"><div class="modal-hdr"><div><h2 id="epTitle">Editar Perfil</h2></div><button class="modal-close" onclick="closeM('mEditProf')">✕</button></div><div class="modal-body" id="epBody"></div></div></div>
+
+<script>
+// ===== STATE =====
+let VIEW = 'client', SCREEN = 'dash', selRating = 0, cancelReason = '', reportReason = '', curChat = null, proSub = true, msgs = [], nextId = 200, editReqId = null, delReqId = null;
+const CATS = ['Electricista','Gasista','Plomero','Pintor','Albañil','Jardinero'];
+
+// ===== TOAST =====
+function toast(type, title, msg, dur = 4000) {
+  const w = document.getElementById('TW');
+  const icons = { error:'❌', warning:'⚠️', success:'✅', info:'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast t${type[0]}`;
+  el.innerHTML = `<div class="toast-icon">${icons[type]}</div><div class="toast-body"><div class="toast-title">${title}</div><div class="toast-msg">${msg}</div></div><button class="toast-close" onclick="this.parentElement.classList.add('out');setTimeout(()=>this.parentElement.remove(),300)">✕</button><div class="toast-prog" style="animation:toastProg ${dur}ms linear forwards"></div>`;
+  w.appendChild(el);
+  setTimeout(() => { if (el.parentElement) { el.classList.add('out'); setTimeout(() => el.remove(), 300); } }, dur);
+}
+
+// ===== DATA =====
+const PROS = [
+  { id:1, name:'Santiago Carreras', spec:'Gasista', rating:0, jobs:0, av:'SC', color:'bl', zone:'San Martín, Mendoza', desc:'Gasista matriculado con experiencia en instalaciones domiciliarias y comerciales.', skills:['Instalación de gas','Detección de fugas','Mantenimiento calefones'] },
+  { id:2, name:'Juan Rodríguez', spec:'Electricista', rating:4.7, jobs:120, av:'JR', color:'or', zone:'Godoy Cruz, Mendoza', desc:'Electricista certificado, tableros e instalaciones.', skills:['Tableros eléctricos','Puesta a tierra','Iluminación LED'] },
+  { id:3, name:'Carlos Méndez', spec:'Plomero', rating:4.5, jobs:85, av:'CM', color:'gr', zone:'Guaymallén, Mendoza', desc:'Plomero con 10 años de experiencia.', skills:['Destapes','Reparación de cañerías','Instalaciones sanitarias'] },
+  { id:4, name:'Miguel Torres', spec:'Gasista', rating:4.9, jobs:200, av:'MT', color:'pu', zone:'San Martín, Mendoza', desc:'Técnico gasista matriculado.', skills:['Gas natural','GLP','Calefacción central'] },
+  { id:5, name:'Pablo Gutiérrez', spec:'Pintor', rating:4.3, jobs:60, av:'PG', color:'bl', zone:'Junín, Mendoza', desc:'Pintor profesional.', skills:['Pintura interior','Exterior','Durlock'] },
+  { id:6, name:'Roberto Díaz', spec:'Electricista', rating:4.8, jobs:95, av:'RD', color:'or', zone:'Las Heras, Mendoza', desc:'Emergencias eléctricas 24hs.', skills:['Emergencias','Instalaciones','Tableros'] }
+];
+const CLIENT = { name:'Gerardo Carreras', rating:4.2, jobs:5, desc:'Propietario en San Martín. Busco profesionales confiables.', zone:'San Martín, Mendoza' };
+let REQS = [{ id:1, type:'Gasista', title:'Pérdida de gas', detail:'Pérdida en la cocina, se siente olor.', loc:'San Martín, Mendoza', date:'12/3/2026', status:'receiving', budgets:[{proId:1,price:15000,msg:'Solo visita de diagnóstico',time:'1 hora',status:'pending'}], max:3, pro:null, qrG:false, qrV:false, qrC:'' }];
+let SENT = [{ rId:1, price:15000, msg:'Solo visita de diagnóstico', time:'1 hora', status:'pending', rTitle:'Pérdida de gas', rType:'Gasista' }];
+const AVAIL = [
+  { id:101, type:'Gasista', title:'Revisión de calefón', detail:'El calefón tarda en calentar y hace ruido.', loc:'Godoy Cruz, Mendoza', date:'14/3/2026' },
+  { id:102, type:'Gasista', title:'Instalación cocina nueva', detail:'Conectar cocina a gas nueva.', loc:'San Martín, Mendoza', date:'15/3/2026' }
+];
+let NOTIFS = [
+  { ic:'📤', tp:'bl', txt:'Santiago Carreras envió presupuesto para "Pérdida de gas"', tm:'Hace 2h' },
+  { ic:'💬', tp:'or', txt:'Nuevo mensaje de un profesional', tm:'Hace 3h' },
+  { ic:'🔔', tp:'gr', txt:'¡Bienvenido a Vértice!', tm:'Hace 1 día' }
+];
+
+// QR SVG
+function qrSvg(code) {
+  const seed = code.split('').reduce((a,c) => a+c.charCodeAt(0), 0);
+  const sz=21, cl=200/sz; let rects='';
+  function fp(ox,oy){let s='';for(let y=0;y<7;y++)for(let x=0;x<7;x++){if(x===0||x===6||y===0||y===6||(x>=2&&x<=4&&y>=2&&y<=4))s+=`<rect x="${(ox+x)*cl}" y="${(oy+y)*cl}" width="${cl}" height="${cl}" fill="#1a2b5f"/>`;}return s;}
+  rects+=fp(0,0)+fp(14,0)+fp(0,14);
+  let s=seed;for(let y=0;y<sz;y++)for(let x=0;x<sz;x++){if((x<8&&y<8)||(x>12&&y<8)||(x<8&&y>12))continue;s=(s*1103515245+12345)&0x7fffffff;if(s%3!==0)rects+=`<rect x="${x*cl}" y="${y*cl}" width="${cl}" height="${cl}" fill="#1a2b5f" rx="1"/>`;}
+  const cx=(sz/2)*cl,is=cl*3;
+  rects+=`<rect x="${cx-is/2-4}" y="${cx-is/2-4}" width="${is+8}" height="${is+8}" fill="white" rx="4"/><rect x="${cx-is/2}" y="${cx-is/2}" width="${is}" height="${is}" fill="#f47b20" rx="4"/><text x="${cx}" y="${cx+5}" text-anchor="middle" font-size="12" font-weight="800" fill="white" font-family="DM Sans">V</text>`;
+  return `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="200" fill="white"/>${rects}</svg>`;
+}
+
+// ===== NAV =====
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function goHome() { showScreen('landingScreen'); document.getElementById('chatBubble').classList.remove('on'); }
+function enterApp(v) { showScreen('appScreen'); switchView(v); goDash(); document.getElementById('chatBubble').classList.add('on'); }
+function switchView(v) {
+  VIEW = v;
+  document.getElementById('togC').classList.toggle('on', v==='client');
+  document.getElementById('togP').classList.toggle('on', v==='pro');
+  document.getElementById('userName').textContent = v==='client' ? CLIENT.name : PROS[0].name;
+  document.getElementById('userBadge').textContent = v==='client' ? 'Cliente' : 'Profesional';
+  document.getElementById('userBadge').className = 'user-badge ' + (v==='client' ? 'ub-c' : 'ub-p');
+  goDash();
+}
+function goDash() {
+  SCREEN = 'dash';
+  ['chatView','profileView','subView'].forEach(x => document.getElementById(x).style.display = 'none');
+  if (VIEW === 'client') { document.getElementById('clientDash').style.display = 'block'; document.getElementById('proDash').style.display = 'none'; renderClientDash(); }
+  else { document.getElementById('clientDash').style.display = 'none'; document.getElementById('proDash').style.display = 'block'; renderProDash(); }
+  updateBubble();
+}
+
+// ===== CLIENT DASH =====
+function renderClientDash() {
+  const op = REQS.filter(r=>r.status==='receiving').length;
+  const ip = REQS.filter(r=>r.status==='in_process').length;
+  const co = REQS.filter(r=>r.status==='completed').length;
+  let h = `<div class="dash-top-row"><p class="dash-title" style="margin:0">Panel del Cliente</p></div>
+  <div class="stats-grid">
+    <div class="stat-card bl an an1"><div class="stat-label">📋 Abiertas</div><div class="stat-num">${op}</div></div>
+    <div class="stat-card or an an2"><div class="stat-label">🔥 En Proceso</div><div class="stat-num">${ip}</div></div>
+    <div class="stat-card gr an an3"><div class="stat-label">✅ Completadas</div><div class="stat-num">${co}</div></div>
+    <div class="stat-card pu an an4"><div class="stat-label">📨 Total</div><div class="stat-num">${REQS.length}</div></div>
+  </div>
+  <div class="sec-header"><h2 class="sec-title">Mis Solicitudes</h2><button class="btn btn-p btn-sm" onclick="openNewReq()">+ Nueva Solicitud</button></div>`;
+  if (!REQS.length) h += '<div style="text-align:center;padding:40px;color:var(--g400)">No tenés solicitudes. ¡Creá una!</div>';
+  else REQS.forEach((r,i) => {
+    const stTag = r.status==='receiving' ? '<span class="tag tag-s">Recibiendo</span>' : r.status==='in_process' ? '<span class="tag tag-p">En Proceso</span>' : r.status==='completed' ? '<span class="tag tag-d">Completada</span>' : '';
+    const verified = r.status==='in_process' && r.qrV ? '<span class="tag tag-d">✓ Verificado</span>' : '';
+    const canEdit = r.status === 'receiving';
+    const editBtns = canEdit ? `<div class="req-acts"><button class="btn-icon" onclick="editReq(${r.id})" title="Editar">✏️</button><button class="btn-icon dng" onclick="deleteReq(${r.id})" title="Eliminar">🗑️</button></div>` : '';
+    const budInfo = r.status==='receiving' ? `<div class="bud-count"><div class="num">${r.budgets.length}</div><div class="lbl">de ${r.max}</div></div>` : '';
+    const actBtn = r.status==='receiving' && r.budgets.length ? `<button class="btn btn-p btn-sm" onclick="viewBudgets(${r.id})">Ver Presupuestos</button>` : r.status==='in_process' ? `<button class="btn btn-p btn-sm" onclick="openChat(${r.id})">Abrir Chat</button>` : '';
+    h += `<div class="req-card an an${i%4+1}"><div class="req-top"><div class="tags">${stTag}<span class="tag tag-c">${r.type}</span>${verified}</div>${editBtns}</div><div class="req-body"><h3>${r.title}</h3><p>${r.detail}</p></div><div class="req-bot"><div>${actBtn}</div>${budInfo}</div></div>`;
+  });
+  document.getElementById('clientDash').innerHTML = h;
+}
+
+// ===== REQUEST CRUD =====
+function clearErrors() { document.querySelectorAll('.ferr').forEach(e => e.classList.remove('vis')); document.querySelectorAll('.fi,.fsel,.fta').forEach(e => e.classList.remove('err')); }
+function showErr(iId, eId) { document.getElementById(iId).classList.add('err'); document.getElementById(eId).classList.add('vis'); }
+
+function openNewReq() { editReqId = null; document.getElementById('mReqTitle').textContent = 'Nueva Solicitud'; document.getElementById('rSubmitBtn').textContent = 'Publicar Solicitud'; document.getElementById('rType').value = ''; document.getElementById('rTitle').value = ''; document.getElementById('rDetail').value = ''; document.getElementById('rLoc').value = 'San Martín, Mendoza'; clearErrors(); openM('mReq'); }
+function editReq(id) { const r = REQS.find(x=>x.id===id); if(!r) return; editReqId = id; document.getElementById('mReqTitle').textContent = 'Editar Solicitud'; document.getElementById('rSubmitBtn').textContent = 'Guardar Cambios'; document.getElementById('rType').value = r.type; document.getElementById('rTitle').value = r.title; document.getElementById('rDetail').value = r.detail; document.getElementById('rLoc').value = r.loc; clearErrors(); openM('mReq'); }
+function submitReq() {
+  clearErrors();
+  const ty = document.getElementById('rType').value, ti = document.getElementById('rTitle').value.trim(), de = document.getElementById('rDetail').value.trim(), lo = document.getElementById('rLoc').value.trim();
+  let err = false;
+  if (!ty) { showErr('rType','eType'); err = true; }
+  if (!ti) { showErr('rTitle','eTitle'); err = true; }
+  if (err) { toast('error','Campos incompletos','Completá los campos obligatorios marcados con *.'); return; }
+  if (editReqId) {
+    const r = REQS.find(x=>x.id===editReqId);
+    if (r) { r.type=ty; r.title=ti; r.detail=de; r.loc=lo; }
+    closeM('mReq'); toast('success','Solicitud actualizada',`"${ti}" editada.`); addNotif('✏️','bl',`Solicitud "${ti}" actualizada.`); editReqId = null;
+  } else {
+    const d = new Date(), ds = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+    REQS.push({id:nextId++,type:ty,title:ti,detail:de,loc:lo,date:ds,status:'receiving',budgets:[],max:3,pro:null,qrG:false,qrV:false,qrC:''});
+    closeM('mReq'); toast('success','Solicitud publicada',`"${ti}" publicada.`); addNotif('📋','gr',`Solicitud "${ti}" publicada.`);
+    setTimeout(() => {
+      const r = REQS[REQS.length-1]; const mp = PROS.filter(p=>p.spec===ty);
+      if (mp.length) { const pr = mp[Math.floor(Math.random()*mp.length)], price = Math.floor(Math.random()*30000)+5000; r.budgets.push({proId:pr.id,price,msg:'Puedo ir a verlo hoy',time:'2 horas',status:'pending'}); addNotif('📤','bl',`${pr.name} presupuestó $${price.toLocaleString('es-AR')}`); toast('info','Nuevo presupuesto',`${pr.name} envió $${price.toLocaleString('es-AR')}.`); if(VIEW==='client'&&SCREEN==='dash') renderClientDash(); }
+    }, 3000);
+  }
+  renderClientDash();
+}
+function deleteReq(id) { const r = REQS.find(x=>x.id===id); if(!r) return; delReqId = id; document.getElementById('delText').textContent = `¿Eliminar "${r.title}"? No se puede deshacer.`; openM('mDelete'); }
+function doDelete() { if(!delReqId) return; const r = REQS.find(x=>x.id===delReqId); const t = r?r.title:''; REQS = REQS.filter(x=>x.id!==delReqId); delReqId = null; closeM('mDelete'); toast('success','Eliminada',`"${t}" eliminada.`); renderClientDash(); }
+
+// ===== BUDGETS =====
+function viewBudgets(id) {
+  const r = REQS.find(x=>x.id===id); if(!r) return;
+  document.getElementById('mBudSub').textContent = `${r.title} — ${r.budgets.length} de ${r.max}`;
+  let h = '';
+  r.budgets.forEach(b => {
+    const p = PROS.find(x=>x.id===b.proId); if(!p) return;
+    const rt = p.rating > 0 ? `⭐ ${p.rating} • ${p.jobs} trabajos` : 'Sin calificaciones aún';
+    const sb = b.status==='pending' ? '<span class="bstat bstat-p">Pendiente</span>' : b.status==='accepted' ? '<span class="bstat bstat-a">Aceptado</span>' : '<span class="bstat bstat-r">Rechazado</span>';
+    h += `<div class="bud-card"><div class="bud-top"><div class="bud-pro" onclick="closeM('mBud');viewProfile(${p.id})"><div class="avatar ${p.color}">${p.av}</div><div class="bud-info"><h4>${p.name}</h4><div class="sp">${p.spec}</div><div class="rt">${rt}</div></div></div><div style="text-align:right"><div class="bud-price">$${b.price.toLocaleString('es-AR')}</div>${sb}</div></div><div class="bud-msg">${b.msg}</div><div class="bud-acts"><button class="btn btn-o btn-sm" onclick="closeM('mBud');viewProfile(${p.id})">Ver Perfil</button>${b.status==='pending'?`<button class="btn btn-g btn-sm" onclick="choosePro(${r.id},${p.id})">✓ Elegir</button>`:''}</div></div>`;
+  });
+  if (r.max - r.budgets.length > 0) h += `<div style="text-align:center;padding:14px;color:var(--g400);font-size:13px">Esperando más presupuestos... (${r.budgets.length}/${r.max})</div>`;
+  document.getElementById('mBudBody').innerHTML = h; openM('mBud');
+}
+
+function choosePro(rid, pid) {
+  const r = REQS.find(x=>x.id===rid), p = PROS.find(x=>x.id===pid); if(!r||!p) return;
+  r.status='in_process'; r.pro=pid; r.qrG=false; r.qrV=false; r.qrC='';
+  r.budgets.forEach(b => { b.status = b.proId===pid ? 'accepted' : 'rejected'; });
+  SENT.forEach(b => { if(b.rId===rid) b.status='accepted'; });
+  closeM('mBud'); toast('success','Profesional elegido',`Elegiste a ${p.name}. ¡Chat habilitado!`);
+  addNotif('✅','gr',`Elegiste a ${p.name} para "${r.title}".`);
+  curChat = r; msgs = [{s:'sys',x:`Servicio iniciado con ${p.name}`},{s:'pro',x:`¡Hola! Soy ${p.name}. ¿Cuándo te viene bien?`}];
+  renderClientDash(); openChat(rid); updateBubble();
+}
+
+// ===== CHAT =====
+function openChat(rid) {
+  const r = REQS.find(x=>x.id===rid); if(!r||!r.pro) return;
+  curChat = r; const p = PROS.find(x=>x.id===r.pro);
+  SCREEN = 'chat';
+  ['clientDash','proDash','profileView','subView'].forEach(x => document.getElementById(x).style.display = 'none');
+  document.getElementById('chatView').style.display = 'block';
+
+  const isC = VIEW === 'client';
+  const partner = isC ? p : { name:CLIENT.name, av:'GC', color:'bl' };
+  const partnerSpec = isC ? p.spec + ' • En proceso' : 'Cliente • ' + r.title;
+
+  // Chat actions
+  let acts = '';
+  if (isC) {
+    acts = `<button class="btn btn-b btn-sm" onclick="genQR()" ${r.qrG?'disabled':''}>${r.qrG?'✓ QR':'🔒 Generar QR'}</button>
+    <button class="btn btn-g btn-sm" onclick="openFinish()" ${r.qrV?'':'disabled'}>Finalizar</button>
+    <button class="btn btn-d btn-sm" onclick="openCancel()">✕</button>
+    <button class="btn btn-d btn-sm" onclick="openM('mReport')" title="Reportar">🚩</button>`;
+  } else {
+    acts = `<button class="btn btn-b btn-sm" onclick="openCamera()" ${r.qrV||!r.qrG?'disabled':''}>${r.qrV?'✓ Verificado':!r.qrG?'⏳ Esperando QR':'📷 Abrir Cámara'}</button>
+    <button class="btn btn-g btn-sm" onclick="openFinish()" ${r.qrV?'':'disabled'}>Completar</button>
+    <button class="btn btn-d btn-sm" onclick="openM('mReport')" title="Reportar">🚩</button>`;
+  }
+
+  // Banner
+  let ban = '';
+  if (r.qrV) ban = '<div class="qr-banner ok"><span class="qbi">✅</span> Identidad verificada. Podés finalizar el trabajo.</div>';
+  else if (isC) ban = '<div class="qr-banner warn"><span class="qbi">🔒</span><div><strong>Verificación requerida.</strong> Cuando llegue el profesional, generá el QR y pedile que lo escanee con su cámara.</div></div>';
+  else ban = r.qrG ? '<div class="qr-banner warn"><span class="qbi">📷</span><div><strong>El cliente generó un QR.</strong> Presioná "Abrir Cámara" para escanear y verificar tu identidad.</div></div>' : '<div class="qr-banner warn"><span class="qbi">⏳</span><div><strong>Esperando QR.</strong> El cliente debe generar el código primero.</div></div>';
+
+  if (!msgs.length) msgs = [{s:'sys',x:'Servicio iniciado'},{s:'pro',x:'¡Hola! Estoy para ayudarte.'}];
+
+  document.getElementById('chatView').innerHTML = `
+  <div class="chat-wrap">
+    <div class="chat-hdr">
+      <div class="chat-hdr-left">
+        <button class="chat-back" onclick="goDash()">←</button>
+        <div class="avatar ${partner.color}" style="cursor:pointer;width:40px;height:40px;font-size:14px" onclick="${isC?`viewProfile(${p.id})`:'openEditProfile()'}">${partner.av}</div>
+        <div class="chat-uinfo" style="cursor:pointer" onclick="${isC?`viewProfile(${p.id})`:'openEditProfile()'}"><h3>${partner.name}</h3><p>${partnerSpec}</p></div>
+      </div>
+      <div class="chat-acts">${acts}</div>
+    </div>
+    ${ban}
+    <div class="chat-msgs" id="chatMsgs"></div>
+    <div class="chat-input"><input id="chatIn" placeholder="Escribí un mensaje..." onkeypress="if(event.key==='Enter')sendMsg()"><button class="chat-send" onclick="sendMsg()">➤</button></div>
+  </div>`;
+  renderMsgs();
+}
+
+function renderMsgs() {
+  const c = document.getElementById('chatMsgs'); if(!c) return;
+  c.innerHTML = msgs.map(m => {
+    if (m.s === 'sys') return `<div class="c-sys">${m.x}</div>`;
+    if (m.s === 'qr-display') return `<div class="qr-display"><h4>🔒 Código de Verificación</h4><div class="qr-svg-box">${qrSvg(m.c)}</div><p style="font-family:monospace;font-size:11px;letter-spacing:1px;color:var(--g500);margin-top:8px">${m.c}</p><p>Mostrá este código al profesional para que lo escanee.</p></div>`;
+    if (m.s === 'qr-camera') {
+      const v = curChat && curChat.qrV;
+      return `<div class="qr-camera"><h4>📷 Cámara activa</h4><div class="qr-viewport"><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div></div><p>Apuntá la cámara al QR del cliente</p>${v?'<div class="qr-success"><div class="qr-check"><svg viewBox="0 0 36 36"><path d="M8 18 L15 25 L28 11"/></svg></div><div class="qr-success-txt">Identidad Verificada</div></div>':''}</div>`;
+    }
+    const me = (VIEW==='client' && m.s==='client') || (VIEW==='pro' && m.s==='pro');
+    return `<div class="c-msg ${me?'sent':'recv'}">${m.x}<div class="time">${m.tm||'Ahora'}</div></div>`;
+  }).join('');
+  c.scrollTop = c.scrollHeight;
+}
+
+function sendMsg() {
+  const inp = document.getElementById('chatIn'), t = inp.value.trim(); if(!t) return;
+  const s = VIEW==='client' ? 'client' : 'pro', now = new Date();
+  msgs.push({s, x:t, tm:`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`});
+  inp.value = ''; renderMsgs();
+  setTimeout(() => { msgs.push({s:s==='client'?'pro':'client', x:['Perfecto!','Ok, te aviso.','Sin problema.','¡Genial!','Dale!'][Math.floor(Math.random()*5)], tm:`${now.getHours()}:${String(now.getMinutes()+1).padStart(2,'0')}`}); renderMsgs(); }, 1500);
+}
+
+// QR - CLIENT generates, PRO opens camera
+function genQR() {
+  const r = curChat; if(!r||r.qrG) return;
+  r.qrC = 'VTX-'+r.id+'-'+Date.now().toString(36).toUpperCase(); r.qrG = true;
+  msgs.push({s:'sys',x:'🔒 QR de verificación generado'},{s:'qr-display',c:r.qrC});
+  toast('info','QR generado','Mostrá este código al profesional cuando llegue.');
+  addNotif('🔒','bl',`QR generado para "${r.title}".`);
+  openChat(r.id);
+}
+
+function openCamera() {
+  const r = curChat; if(!r||!r.qrG||r.qrV) return;
+  msgs.push({s:'sys',x:'📷 Cámara abierta, escaneando...'},{s:'qr-camera',c:r.qrC});
+  renderMsgs();
+  // Simulate scan after 3.5s
+  setTimeout(() => {
+    r.qrV = true;
+    msgs.push({s:'sys',x:'✅ ¡Identidad verificada! Ahora pueden finalizar el trabajo.'});
+    toast('success','Verificado','Identidad confirmada por escaneo QR.');
+    addNotif('✅','gr',`Verificado para "${r.title}".`);
+    setTimeout(() => openChat(r.id), 800);
+  }, 3500);
+}
+
+// CANCEL
+function openCancel() { cancelReason=''; document.querySelectorAll('.opt-btn:not(.rpt)').forEach(o=>o.classList.remove('sel')); openM('mCancel'); }
+function selCancel(el) { document.querySelectorAll('.opt-btn:not(.rpt)').forEach(o=>o.classList.remove('sel')); el.classList.add('sel'); cancelReason=el.textContent; }
+function doCancel() {
+  if (!cancelReason) { toast('warning','Seleccioná un motivo','Elegí una razón antes de confirmar.'); return; }
+  if (!curChat) return;
+  curChat.status='receiving'; curChat.pro=null; curChat.qrG=false; curChat.qrV=false; curChat.qrC='';
+  curChat.budgets.forEach(b=>b.status='pending'); msgs=[];
+  closeM('mCancel'); toast('info','Servicio cancelado',`"${curChat.title}" volvió a recibir presupuestos.`); goDash();
+}
+
+// FINISH
+function openFinish() {
+  if (!curChat||!curChat.qrV) { toast('warning','Verificación requerida','El profesional debe escanear el QR antes de finalizar.'); return; }
+  selRating=0; document.querySelectorAll('#starsEl .star').forEach(s=>s.classList.remove('on'));
+  document.getElementById('rateCom').value='';
+  document.getElementById('rateTitle').textContent = `Calificar ${VIEW==='client'?'Profesional':'Cliente'}`;
+  openM('mRate');
+}
+function setRat(n) { selRating=n; document.querySelectorAll('#starsEl .star').forEach((s,i)=>s.classList.toggle('on',i<n)); }
+function doRate() { if(!selRating){toast('warning','Calificación requerida','Seleccioná al menos una estrella.');return;} if(!curChat)return; curChat.status='completed'; closeM('mRate'); toast('success','¡Gracias!','Calificación enviada.'); addNotif('⭐','gr','Calificación enviada.'); msgs=[]; goDash(); }
+
+// REPORT
+function selReport(el) { document.querySelectorAll('.opt-btn.rpt').forEach(o=>o.classList.remove('sel')); el.classList.add('sel'); reportReason=el.textContent; }
+function doReport() { if(!reportReason){toast('warning','Seleccioná un motivo','Elegí la razón del reporte.');return;} closeM('mReport'); toast('success','Reporte enviado','Lo revisaremos pronto. Gracias.'); addNotif('🚩','or','Reporte enviado.'); }
+
+// PROFILE
+function viewProfile(pid) {
+  const p = PROS.find(x=>x.id===pid); if(!p) return;
+  SCREEN = 'prof';
+  ['clientDash','proDash','chatView','subView'].forEach(x=>document.getElementById(x).style.display='none');
+  document.getElementById('profileView').style.display = 'block';
+  const colorMap = {bl:'blue',or:'orange',gr:'green-d',pu:'purple'};
+  const skills = p.skills ? p.skills.map(s=>`<span class="prof-skill">${s}</span>`).join('') : '';
+  document.getElementById('profileView').innerHTML = `<div class="prof-wrap"><button class="btn btn-o btn-sm" onclick="goDash()" style="margin-bottom:14px">← Volver</button><div class="prof-card"><div class="prof-hdr"><div class="prof-av" style="background:var(--${colorMap[p.color]||'blue'})">${p.av}</div></div><div class="prof-body"><h2>${p.name}</h2><div class="sp">${p.spec}</div><div class="prof-stats"><div class="prof-stat"><div class="v">⭐ ${p.rating||'Nuevo'}</div><div class="l">Rating</div></div><div class="prof-stat"><div class="v">${p.jobs}</div><div class="l">Trabajos</div></div></div><div class="prof-desc">${p.desc}</div>${skills?`<div class="prof-skills">${skills}</div>`:''}<div class="prof-zone">📍 ${p.zone}</div><button class="btn btn-p btn-full btn-lg" onclick="goDash()">Contratar</button></div></div></div>`;
+}
+
+// EDIT PROFILE
+function openEditProfile() {
+  const isC = VIEW === 'client';
+  let h = '';
+  if (isC) {
+    h = `<div class="fg"><label class="fl">Nombre</label><input class="fi" id="epName" value="${CLIENT.name}"></div>
+    <div class="fg"><label class="fl">Descripción</label><textarea class="fta" id="epDesc">${CLIENT.desc}</textarea></div>
+    <div class="fg"><label class="fl">Zona</label><input class="fi" id="epZone" value="${CLIENT.zone}"></div>
+    <button class="btn btn-p btn-full btn-lg" onclick="saveProfile()">Guardar</button>`;
+  } else {
+    const p = PROS[0];
+    h = `<div class="fg"><label class="fl">Nombre</label><input class="fi" id="epName" value="${p.name}"></div>
+    <div class="fg"><label class="fl">Especialidad</label><select class="fsel" id="epSpec">${CATS.map(c=>`<option ${c===p.spec?'selected':''}>${c}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Descripción</label><textarea class="fta" id="epDesc">${p.desc}</textarea></div>
+    <div class="fg"><label class="fl">Habilidades (separadas por coma)</label><input class="fi" id="epSkills" value="${p.skills.join(', ')}"></div>
+    <div class="fg"><label class="fl">Zona</label><input class="fi" id="epZone" value="${p.zone}"></div>
+    <div class="fg"><label class="fl">Foto de perfil</label><div style="border:2px dashed var(--g300);border-radius:10px;padding:20px;text-align:center;color:var(--g400);cursor:pointer;font-size:14px">📷 Subir foto (próximamente)</div></div>
+    <button class="btn btn-p btn-full btn-lg" onclick="saveProfile()">Guardar</button>`;
+  }
+  document.getElementById('epTitle').textContent = isC ? 'Editar Mi Perfil' : 'Editar Perfil Profesional';
+  document.getElementById('epBody').innerHTML = h;
+  openM('mEditProf');
+}
+function saveProfile() {
+  const n = document.getElementById('epName')?.value;
+  if (!n) { toast('error','Campo requerido','El nombre no puede estar vacío.'); return; }
+  if (VIEW==='client') { CLIENT.name=n; CLIENT.desc=document.getElementById('epDesc').value; CLIENT.zone=document.getElementById('epZone').value; document.getElementById('userName').textContent = n; }
+  else { const p=PROS[0]; p.name=n; p.spec=document.getElementById('epSpec')?.value||p.spec; p.desc=document.getElementById('epDesc').value; p.skills=(document.getElementById('epSkills')?.value||'').split(',').map(s=>s.trim()).filter(Boolean); p.zone=document.getElementById('epZone').value; document.getElementById('userName').textContent = n; }
+  closeM('mEditProf'); toast('success','Perfil actualizado','Tus datos fueron guardados.');
+}
+
+// ===== PRO DASH =====
+function renderProDash() {
+  let h = `<div class="dash-top-row"><p class="dash-title" style="margin:0">Panel del Profesional</p></div>
+  <div class="stats-grid">
+    <div class="stat-card bl an an1"><div class="stat-label">📋 Disponibles</div><div class="stat-num">${AVAIL.length}</div></div>
+    <div class="stat-card or an an2"><div class="stat-label">📤 Enviados</div><div class="stat-num">${SENT.length}</div></div>
+    <div class="stat-card gr an an3"><div class="stat-label">🔥 En Proceso</div><div class="stat-num">${SENT.filter(b=>b.status==='accepted').length}</div></div>
+    <div class="stat-card pu an an4"><div class="stat-label">✅ Completados</div><div class="stat-num">3</div></div>
+  </div>`;
+
+  if (!proSub) h += `<div style="background:var(--orange-p);border:2px solid var(--orange);border-radius:var(--r);padding:18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px"><div><strong style="color:var(--orange)">⚡ Activá tu cuenta</strong><br><span style="font-size:13px;color:var(--g500)">Suscribite para enviar presupuestos.</span></div><button class="btn btn-p btn-sm" onclick="showSub()">Activar</button></div>`;
+
+  // Active jobs FIRST
+  const activeJobs = SENT.filter(b => b.status === 'accepted');
+  if (activeJobs.length) {
+    h += '<div class="sec-header"><h2 class="sec-title">Trabajos Activos</h2></div>';
+    activeJobs.forEach((b,i) => {
+      h += `<div class="req-card an an${i%4+1}" style="border-left:4px solid var(--green)"><div class="req-top"><div class="tags"><span class="tag tag-d">En Proceso</span><span class="tag tag-c">${b.rType}</span></div><span style="font-size:20px;font-weight:700;color:var(--blue)">$${b.price.toLocaleString('es-AR')}</span></div><div class="req-body"><h3>${b.rTitle}</h3><p>${b.msg}</p></div><div><button class="btn btn-p btn-sm" onclick="openChatPro(${b.rId})">Abrir Chat</button></div></div>`;
+    });
+  }
+
+  // Available requests
+  h += '<div class="sec-header" style="margin-top:24px"><h2 class="sec-title">Solicitudes Disponibles</h2></div>';
+  if (!AVAIL.length) h += '<div style="text-align:center;padding:28px;color:var(--g400);font-size:14px">No hay solicitudes disponibles.</div>';
+  else AVAIL.forEach((r,i) => {
+    h += `<div class="req-card an an${i%4+1}"><div class="cli-row"><div class="avatar bl" style="width:34px;height:34px;font-size:11px;border-radius:8px">GC</div><div class="cli-info"><strong>${CLIENT.name}</strong> • ⭐ ${CLIENT.rating} • ${CLIENT.jobs} trabajos</div></div><div class="tags" style="margin-bottom:10px"><span class="tag tag-c">${r.type}</span></div><div class="req-body"><h3>${r.title}</h3><p>${r.detail}</p></div><div style="font-size:13px;color:var(--g400);margin-bottom:12px">📍 ${r.loc} • ${r.date}</div><div style="display:flex;gap:10px"><button class="btn btn-o btn-sm" onclick="viewDetail(${r.id})">Ver Detalle</button><button class="btn btn-p btn-sm" onclick="openSendBud(${r.id})">Presupuestar</button></div></div>`;
+  });
+
+  // Sent budgets (pending only)
+  const pending = SENT.filter(b => b.status === 'pending');
+  if (pending.length) {
+    h += '<div class="sec-header" style="margin-top:24px"><h2 class="sec-title">Presupuestos Pendientes</h2></div>';
+    pending.forEach((b,i) => {
+      h += `<div class="req-card an an${i%4+1}"><div class="req-top"><div class="tags"><span class="bstat bstat-p">Esperando</span><span class="tag tag-c">${b.rType}</span></div><span style="font-size:20px;font-weight:700;color:var(--blue)">$${b.price.toLocaleString('es-AR')}</span></div><div class="req-body"><h3>${b.rTitle}</h3><p>${b.msg}</p></div></div>`;
+    });
+  }
+
+  document.getElementById('proDash').innerHTML = h;
+}
+
+function viewDetail(id) {
+  const r = AVAIL.find(x=>x.id===id); if(!r) return;
+  document.getElementById('detTitle').textContent = r.title;
+  document.getElementById('detSub').textContent = `${r.type} • ${r.date}`;
+  document.getElementById('detBody').innerHTML = `<div class="cli-row"><div class="avatar bl" style="width:34px;height:34px;font-size:11px;border-radius:8px">GC</div><div class="cli-info"><strong>${CLIENT.name}</strong> • ⭐ ${CLIENT.rating} • ${CLIENT.jobs} trabajos</div></div><div class="fg"><div class="fl">Descripción</div><div style="padding:14px;background:var(--g50);border-radius:10px;font-size:14px;color:var(--g600)">${r.detail}</div></div><div class="fg"><div class="fl">Ubicación</div><div style="font-size:14px;color:var(--g600)">📍 ${r.loc}</div></div><button class="btn btn-p btn-full btn-lg" onclick="closeM('mDetail');openSendBud(${r.id})">Enviar Presupuesto</button>`;
+  openM('mDetail');
+}
+
+function openSendBud(id) {
+  if (!proSub) { showSub(); return; }
+  const r = AVAIL.find(x=>x.id===id); if(!r) return;
+  document.getElementById('mSBudSub').textContent = `Para: ${r.title}`;
+  document.getElementById('bPrice').value=''; document.getElementById('bTime').value=''; document.getElementById('bMsg').value='';
+  document.getElementById('mSendBud').dataset.rid = id;
+  clearErrors(); openM('mSendBud');
+}
+
+function doSendBud() {
+  clearErrors();
+  const rid = parseInt(document.getElementById('mSendBud').dataset.rid);
+  const pr = document.getElementById('bPrice').value, ti = document.getElementById('bTime').value, ms = document.getElementById('bMsg').value || 'Sin mensaje';
+  if (!pr) { showErr('bPrice','ePrice'); toast('error','Campo obligatorio','Ingresá un precio.'); return; }
+  const r = AVAIL.find(x=>x.id===rid); if(!r) return;
+  SENT.push({rId:rid,price:parseInt(pr),msg:ms,time:ti,status:'pending',rTitle:r.title,rType:r.type});
+  const cr = REQS.find(x=>x.type===r.type&&x.status==='receiving');
+  if (cr && cr.budgets.length < cr.max) cr.budgets.push({proId:1,price:parseInt(pr),msg:ms,time:ti,status:'pending'});
+  const idx = AVAIL.findIndex(x=>x.id===rid); if(idx>-1) AVAIL.splice(idx,1);
+  closeM('mSendBud'); toast('success','Presupuesto enviado',`$${parseInt(pr).toLocaleString('es-AR')} enviado.`);
+  addNotif('📤','bl',`Presupuesto $${parseInt(pr).toLocaleString('es-AR')} enviado.`);
+  renderProDash();
+}
+
+function openChatPro(rid) {
+  const r = REQS.find(x=>x.id===rid);
+  curChat = r || {id:rid,pro:1,status:'in_process',title:'Pérdida de gas',qrG:false,qrV:false,qrC:''};
+  if (!msgs.length) msgs = [{s:'sys',x:'Servicio iniciado'},{s:'client',x:'Hola, ¿cuándo podrías venir?'}];
+  openChat(curChat.id || rid);
+}
+
+// SUBSCRIPTION
+function showSub() {
+  SCREEN = 'sub';
+  ['clientDash','proDash','chatView','profileView'].forEach(x=>document.getElementById(x).style.display='none');
+  document.getElementById('subView').style.display = 'block';
+  document.getElementById('subView').innerHTML = `<div class="sub-wrap"><button class="btn btn-o btn-sm" onclick="goDash()" style="margin-bottom:14px">← Volver</button><div class="sub-card"><div style="font-size:44px;margin-bottom:16px">⚡</div><h2>Activar Cuenta Profesional</h2><p>Accedé a solicitudes de clientes en tu zona y empezá a generar ingresos.</p><div class="sub-price">$24.000 <span>/ mes</span></div><div class="sub-usd">Equivalente a USD $20 /mes</div><ul class="sub-list"><li>Solicitudes ilimitadas de tu categoría</li><li>Hasta 20 presupuestos por mes</li><li>Perfil verificado con badge</li><li>Chat directo con clientes</li><li>Estadísticas de rendimiento</li><li>Soporte prioritario</li></ul><button class="btn btn-p btn-full btn-lg" onclick="activateSub()" style="animation:pulse 2s infinite">Activar Suscripción</button><p style="font-size:12px;color:var(--g400);margin-top:12px">Podés cancelar en cualquier momento. Precios en ARS.</p></div></div>`;
+}
+function activateSub() { proSub=true; toast('success','¡Cuenta activada!','Ya podés enviar presupuestos.'); addNotif('✅','gr','Cuenta profesional activada.'); goDash(); }
+
+// CHAT BUBBLE
+function toggleBubble() { document.getElementById('cbPopup').classList.toggle('on'); }
+function updateBubble() {
+  const chats = REQS.filter(r=>r.status==='in_process'&&r.pro);
+  const list = document.getElementById('cbList');
+  const bdg = document.getElementById('cbBadge');
+  if (!chats.length) { list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--g400);font-size:14px">No hay chats activos.</div>'; bdg.style.display='none'; return; }
+  bdg.style.display='flex'; bdg.textContent=chats.length;
+  list.innerHTML = chats.map(r => {
+    const p = PROS.find(x=>x.id===r.pro);
+    return `<div class="cb-item" onclick="document.getElementById('cbPopup').classList.remove('on');openChat(${r.id})"><div class="avatar ${p?p.color:'bl'}">${p?p.av:'?'}</div><div class="cb-item-info"><h4>${p?p.name:'Profesional'}</h4><p>${r.title}</p></div><div class="cb-dot"></div></div>`;
+  }).join('');
+}
+document.addEventListener('click', e => { if (!e.target.closest('.chat-bubble')) document.getElementById('cbPopup').classList.remove('on'); });
+
+// NOTIFS
+function addNotif(ic,tp,txt) { NOTIFS.unshift({ic,tp,txt,tm:'Justo ahora'}); const b=document.getElementById('notifCount'); b.textContent=parseInt(b.textContent)+1; document.getElementById('notifBtn').classList.add('shake'); setTimeout(()=>document.getElementById('notifBtn').classList.remove('shake'),600); renderNotifs(); }
+function toggleNotifs() { document.getElementById('notifDrop').classList.toggle('on'); renderNotifs(); }
+function renderNotifs() { document.getElementById('notifList').innerHTML = NOTIFS.slice(0,6).map(n=>`<div class="noti-item"><div class="noti-icon ${n.tp}">${n.ic}</div><div><div class="noti-text">${n.txt}</div><div class="noti-time">${n.tm}</div></div></div>`).join(''); }
+document.addEventListener('click', e => { if(!e.target.closest('#notifBtn')&&!e.target.closest('#notifDrop')) document.getElementById('notifDrop').classList.remove('on'); });
+
+// MODAL HELPERS
+function openM(id) { document.getElementById(id).classList.add('on'); }
+function closeM(id) { document.getElementById(id).classList.remove('on'); }
+document.querySelectorAll('.modal-bg').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('on'); }));
+document.addEventListener('input', e => { if(e.target.matches('.fi,.fsel,.fta')) { e.target.classList.remove('err'); const er=e.target.parentElement.querySelector('.ferr'); if(er)er.classList.remove('vis'); }});
+
+renderNotifs();
+</script>
+</body>
+</html>
